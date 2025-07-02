@@ -1,4 +1,4 @@
-// ExcelClone.js
+// ExcelClone.js v1
 
 import { Grid } from './Grid.js';
 import { Selection } from './Selection.js';
@@ -651,6 +651,7 @@ export class ExcelClone {
         this.render();
     }
 }
+console.log("done")
 
 
 
