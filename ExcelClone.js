@@ -256,7 +256,7 @@ export class ExcelClone {
         }
 
         if (!hasNumbers) {
-            this.statsEl.textContent = `Count: ${count} | Selection: ${selectionSize} cells`;
+            this.statsEl.textContent = `Count: ${count} | Selection: ${selectionSize} `;
             return;
         }
 

@@ -1,7 +1,16 @@
 import { ExcelClone } from './ExcelClone.js';
 import { ExcelUI } from './ExcelUI.js';
 
-const root = document.getElementById('root');
+
+function createRootContainer(parent = document.body) {
+    const root = document.createElement('div');
+    root.className = 'app';
+    parent.appendChild(root);
+    return root;
+}
+
+
+const root  = createRootContainer();
 
 const ui = new ExcelUI(root, {
     loadData: loadSampleData,

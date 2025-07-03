@@ -10,8 +10,14 @@ cellBorderColor: #137E43
 
 selection border doesnt disappear when moved out of the visible screen- done
 request animation frame for smooth selection and dragging-done
-html clean
+html clean-done
 multiple insertion- done
+
+
+scroll while dragging
+resize multiple cols/rows
+undo/redo 
+
 
 
 
