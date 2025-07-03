@@ -25,58 +25,58 @@ export class Selection {
             const minRow = Math.min(start.row, end.row);
             const maxRow = Math.max(start.row, end.row);
             let y = this.excel.headerHeight;
-             let top=null;
-            let bottom=null;
+            let top = null;
+            let bottom = null;
 
             for (let row = startRow; row < startRow + visibleRows; row++) {
                 const height = this.excel.getRowHeight(row);
                 if (row >= minRow && row <= maxRow) {
                     ctx.fillRect(this.excel.headerWidth, y, rect.width - this.excel.headerWidth, height);
                     // ctx.strokeRect(0, y, rect.width - this.excel.headerWidth, height);
-                    if(top==null) top=y;
-                    bottom= y+ height
+                    if (top == null) top = y;
+                    bottom = y + height
                 }
                 y += height;
             }
 
-            if(top!==null && bottom!==null){
-                    ctx.strokeRect(0, top,rect.width ,bottom-top);
-                    // console.log(left, right);
-                    
-            } 
+            if (top !== null && bottom !== null) {
+                ctx.strokeRect(0, top, rect.width, bottom - top);
+                // console.log(left, right);
+
+            }
         } else if (selection.type === 'col') {
             const minCol = Math.min(start.col, end.col);
             const maxCol = Math.max(start.col, end.col);
             let x = this.excel.headerWidth;
-            let left=null;
-            let right=null;
+            let left = null;
+            let right = null;
             for (let col = startCol; col < startCol + visibleCols; col++) {
                 const width = this.excel.getColWidth(col);
                 if (col >= minCol && col <= maxCol) {
 
                     ctx.fillRect(x, this.excel.headerHeight, width, rect.height - this.excel.headerHeight);
                     // ctx.strokeRect(x, 0, width, rect.height);
-                    if(left==null){
-                        left=x;
+                    if (left == null) {
+                        left = x;
                     }
-                    right= x+width;
+                    right = x + width;
 
 
                 }
                 x += width;
-                
+
 
             }
             //  console.log(minCol, minColDist, x);
 
-            if(left!==null && right!==null){
-                    ctx.strokeRect(left, 0, right-left, rect.height);
-                    // console.log(left, right);
-                    
-            } 
-        
+            if (left !== null && right !== null) {
+                ctx.strokeRect(left, 0, right - left, rect.height);
+                // console.log(left, right);
 
-        } 
+            }
+
+
+        }
         else {
             const minRow = Math.min(start.row, end.row);
             const maxRow = Math.max(start.row, end.row);
@@ -84,21 +84,21 @@ export class Selection {
             const maxCol = Math.max(start.col, end.col);
             let sumWidth = 0;
             let sumHeight = 0;
-             let anchorCellRect = null;
-          
+            let anchorCellRect = null;
+
             for (let row = minRow; row <= maxRow; row++) {
                 for (let col = minCol; col <= maxCol; col++) {
                     if (row >= startRow && row < startRow + visibleRows &&
                         col >= startCol && col < startCol + visibleCols) {
                         const cellRect = this.excel.getCellRect(row, col);
                         // if (row != minRow || col != minCol) {
-                          if (row === start.row && col === start.col){
-                                anchorCellRect = cellRect;
-                          }
-                            else {
+                        if (row === start.row && col === start.col) {
+                            anchorCellRect = cellRect;
+                        }
+                        else {
                             ctx.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
                         }
-                   
+
 
                     }
                 }
@@ -116,6 +116,8 @@ export class Selection {
         }
 
         // this.excel.updateStats();
-        setTimeout(() => this.excel.updateStats(), 0);
+        // Use debounced stats update instead of immediate
+        this.excel.scheduleStatsUpdate();
+
     }
 }

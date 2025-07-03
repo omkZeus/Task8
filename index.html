@@ -1,33 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-    <div class="container">
-        <div class="toolbar">
-            <button onclick="loadSampleData()">Load Data</button>
-            <button onclick="clearData()">Clear Data</button>
-            <div class="stats" id="stats">Ready</div>
-        </div>
-        <div class="canvas-container" id="canvasContainer">
-            <canvas id="canvas"></canvas>
-            <input type="text" id="cellInput" class="cell-input">
-            <div class="scrollbar-vertical" id="vScrollbar">
-                <div class="scroll-thumb" id="vThumb"></div>
-            </div>
-            <div class="scrollbar-horizontal" id="hScrollbar">
-                <div class="scroll-thumb" id="hThumb"></div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="./main.js"></script>
+  <div id="root"></div>
+  <script type="module" src="./main.js"></script>
 </body>
-
 </html>

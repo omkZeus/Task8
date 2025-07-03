@@ -28,50 +28,50 @@ export class ContextMenu {
         this.excel.contextRow = row;
         this.excel.contextCol = col;
 
-        if (type === 'row' || type === 'cell') {
-            this._addItem('Insert Row Above', () => this.excel.sheetOps.insertRowBelow(row - 1));
-            this._addItem('Insert Row Below', () => this.excel.sheetOps.insertRowBelow(row));
-        }
         // if (type === 'row' || type === 'cell') {
-        //     const { start, end } = this.excel.selection;
-        //     const count = Math.abs((end?.row ?? start.row) - start.row) + 1;
-
-        //     this._addItem(`Insert ${count} Row${count > 1 ? 's' : ''} Above`, () => {
-        //         for (let i = 0; i < count; i++) {
-        //             this.excel.sheetOps.insertRowBelow(row - 1);
-        //         }
-        //     });
-
-        //     this._addItem(`Insert ${count} Row${count > 1 ? 's' : ''} Below`, () => {
-        //         for (let i = 0; i < count; i++) {
-        //             this.excel.sheetOps.insertRowBelow(row);
-        //         }
-        //     });
+        //     this._addItem('Insert Row Above', () => this.excel.sheetOps.insertRowBelow(row - 1));
+        //     this._addItem('Insert Row Below', () => this.excel.sheetOps.insertRowBelow(row));
         // }
+        if (type === 'row' || type === 'cell') {
+            const { start, end } = this.excel.selection;
+            const count = Math.abs((end?.row ?? start.row) - start.row) + 1;
 
+            this._addItem(`Insert ${count} Row${count > 1 ? 's' : ''} Above`, () => {
+                for (let i = 0; i < count; i++) {
+                    this.excel.sheetOps.insertRowBelow(start.row - 1);
+                }
+            });
 
-
-        if (type === 'col' || type === 'cell') {
-            this._addItem('Insert Column Left', () => this.excel.sheetOps.insertColRight(col - 1));
-            this._addItem('Insert Column Right', () => this.excel.sheetOps.insertColRight(col));
+            this._addItem(`Insert ${count} Row${count > 1 ? 's' : ''} Below`, () => {
+                for (let i = 0; i < count; i++) {
+                    this.excel.sheetOps.insertRowBelow(end?.row ?? start.row);
+                }
+            });
         }
+
+
 
         // if (type === 'col' || type === 'cell') {
-        //     const { start, end } = this.excel.selection;
-        //     const count = Math.abs((end?.col ?? start.col) - start.col) + 1;
-
-        //     this._addItem(`Insert ${count} Column${count > 1 ? 's' : ''} Left`, () => {
-        //         for (let i = 0; i < count; i++) {
-        //             this.excel.sheetOps.insertColRight(col - 1);
-        //         }
-        //     });
-
-        //     this._addItem(`Insert ${count} Column${count > 1 ? 's' : ''} Right`, () => {
-        //         for (let i = 0; i < count; i++) {
-        //             this.excel.sheetOps.insertColRight(col);
-        //         }
-        //     });
+        //     this._addItem('Insert Column Left', () => this.excel.sheetOps.insertColRight(col - 1));
+        //     this._addItem('Insert Column Right', () => this.excel.sheetOps.insertColRight(col));
         // }
+
+        if (type === 'col' || type === 'cell') {
+            const { start, end } = this.excel.selection;
+            const count = Math.abs((end?.col ?? start.col) - start.col) + 1;
+
+            this._addItem(`Insert ${count} Column${count > 1 ? 's' : ''} Left`, () => {
+                for (let i = 0; i < count; i++) {
+                    this.excel.sheetOps.insertColRight(start.col - 1);
+                }
+            });
+
+            this._addItem(`Insert ${count} Column${count > 1 ? 's' : ''} Right`, () => {
+                for (let i = 0; i < count; i++) {
+                    this.excel.sheetOps.insertColRight(end?.col ?? start.col);
+                }
+            });
+        }
 
 
         this.menu.style.left = `${x}px`;

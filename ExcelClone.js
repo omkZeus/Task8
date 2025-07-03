@@ -1,4 +1,4 @@
-// ExcelClone.js v1
+// ExcelClone.js 
 
 import { Grid } from './Grid.js';
 import { Selection } from './Selection.js';
@@ -14,12 +14,16 @@ export class ExcelClone {
       * @param {HTMLCanvasElement} canvas Canvas element to render the spreadsheet
       **/
 
-    constructor(canvas) {
+    constructor({ canvas, cellInput, statsEl, container, vScrollbar, hScrollbar, vThumb, hThumb }) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.cellInput = document.getElementById('cellInput');
-        this.statsEl = document.getElementById('stats');
-        this.container = document.getElementById('canvasContainer');
+        this.cellInput = cellInput;
+        this.statsEl = statsEl;
+        this.container = container;
+        this.vScrollbar = vScrollbar;
+        this.hScrollbar = hScrollbar;
+        this.vThumb = vThumb;
+        this.hThumb = hThumb;
 
         // Grid configuration
         this.rowHeight = 25;
@@ -56,10 +60,10 @@ export class ExcelClone {
         this.rowHeights = new Map();
 
         // Scrollbars
-        this.vScrollbar = document.getElementById('vScrollbar');
-        this.hScrollbar = document.getElementById('hScrollbar');
-        this.vThumb = document.getElementById('vThumb');
-        this.hThumb = document.getElementById('hThumb');
+        // this.vScrollbar = document.getElementById('vScrollbar');
+        // this.hScrollbar = document.getElementById('hScrollbar');
+        // this.vThumb = document.getElementById('vThumb');
+        // this.hThumb = document.getElementById('hThumb');
         this.scrollbarWidth = 15;
 
         // Modules
@@ -72,6 +76,11 @@ export class ExcelClone {
 
         //Sheet operations
         this.sheetOps = new SheetOperations(this);
+
+        // Performance optimizations
+        this.statsUpdateTimer = null;
+        this.lastStatsSelection = null;
+
 
         //Smooth animation using req animation
         this._renderScheduled = false;
@@ -174,6 +183,7 @@ export class ExcelClone {
         };
     }
 
+    // Optimized stats update with debouncing and early exit
     updateStats() {
         const sel = this.selection;
         if (!sel.start) {
@@ -189,45 +199,148 @@ export class ExcelClone {
         let minCol = Math.min(start.col, end.col);
         let maxCol = Math.max(start.col, end.col);
 
-        let count = 0;
-        const values = [];
+        // Check if selection hasn't changed to avoid unnecessary computation
+        const selectionKey = `${sel.type}-${minRow}-${maxRow}-${minCol}-${maxCol}`;
+        if (this.lastStatsSelection === selectionKey) {
+            return;
+        }
+        this.lastStatsSelection = selectionKey;
 
-        // Use efficient Map iteration instead of nested loops
+        // Show progress for very large selections
+        const selectionSize = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+        if (selectionSize > 50000) {
+            this.statsEl.textContent = `Calculating stats for ${selectionSize} cells...`;
+
+            // Use setTimeout to allow UI to update and prevent blocking
+            setTimeout(() => {
+                this.calculateStatsAsync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
+            }, 10);
+            return;
+        }
+
+        // For smaller selections, calculate immediately
+        this.calculateStatsSync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
+    }
+
+    // Synchronous calculation for smaller selections
+    calculateStatsSync(sel, minRow, maxRow, minCol, maxCol, selectionSize) {
+        let count = 0;
+        let sum = 0;
+        let min = Infinity;
+        let max = -Infinity;
+        let hasNumbers = false;
+
+        // Optimized iteration - only check cells that could be in selection
         for (const [key, value] of this.data) {
             const [row, col] = key.split(',').map(Number);
 
-            let inSelection = false;
-
+            // Early exit if row/col is outside possible range
             if (sel.type === 'col') {
-                inSelection = col >= minCol && col <= maxCol;
+                if (col < minCol || col > maxCol) continue;
             } else if (sel.type === 'row') {
-                inSelection = row >= minRow && row <= maxRow;
+                if (row < minRow || row > maxRow) continue;
             } else {
-                inSelection = row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
+                if (row < minRow || row > maxRow || col < minCol || col > maxCol) continue;
             }
 
-            if (inSelection && value !== '') {
+            if (value !== '') {
                 count++;
                 const num = parseFloat(value);
                 if (!isNaN(num)) {
-                    values.push(num);
+                    hasNumbers = true;
+                    sum += num;
+                    if (num < min) min = num;
+                    if (num > max) max = num;
                 }
             }
         }
 
-        if (values.length === 0) {
-            this.statsEl.textContent = `Count: ${count}`;
+        if (!hasNumbers) {
+            this.statsEl.textContent = `Count: ${count} | Selection: ${selectionSize} cells`;
             return;
         }
 
-        const sum = values.reduce((a, b) => a + b, 0);
-        const avg = sum / values.length;
-        const min = values.reduce((a, b) => Math.min(a, b), Infinity);
-        const max = values.reduce((a, b) => Math.max(a, b), -Infinity);
-
+        const avg = sum / count;
         this.statsEl.textContent =
-            `Count: ${count} | Sum: ${sum.toFixed(2)} | Avg: ${avg.toFixed(2)} | Min: ${min} | Max: ${max}`;
+            `Count: ${count} | Sum: ${sum.toFixed(2)} | Avg: ${avg.toFixed(2)} | Min: ${min} | Max: ${max} | Selection: ${selectionSize} cells`;
     }
+
+    // Asynchronous calculation for large selections to prevent UI blocking
+    calculateStatsAsync(sel, minRow, maxRow, minCol, maxCol, selectionSize) {
+        let count = 0;
+        let sum = 0;
+        let min = Infinity;
+        let max = -Infinity;
+        let hasNumbers = false;
+        let processed = 0;
+
+        const dataEntries = Array.from(this.data.entries());
+        const batchSize = 1000; // Process 1000 entries at a time
+
+        const processBatch = (startIndex) => {
+            const endIndex = Math.min(startIndex + batchSize, dataEntries.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                const [key, value] = dataEntries[i];
+                const [row, col] = key.split(',').map(Number);
+
+                // Early exit if row/col is outside possible range
+                if (sel.type === 'col') {
+                    if (col < minCol || col > maxCol) continue;
+                } else if (sel.type === 'row') {
+                    if (row < minRow || row > maxRow) continue;
+                } else {
+                    if (row < minRow || row > maxRow || col < minCol || col > maxCol) continue;
+                }
+
+                if (value !== '') {
+                    count++;
+                    const num = parseFloat(value);
+                    if (!isNaN(num)) {
+                        hasNumbers = true;
+                        sum += num;
+                        if (num < min) min = num;
+                        if (num > max) max = num;
+                    }
+                }
+                processed++;
+            }
+
+            // Update progress
+            if (processed % 5000 === 0) {
+                const progress = Math.round((processed / dataEntries.length) * 100);
+                this.statsEl.textContent = `Calculating... ${progress}% (${processed}/${dataEntries.length})`;
+            }
+
+            // Continue processing or finish
+            if (endIndex < dataEntries.length) {
+                setTimeout(() => processBatch(endIndex), 1); // Small delay to prevent blocking
+            } else {
+                // Finished processing
+                if (!hasNumbers) {
+                    this.statsEl.textContent = `Count: ${count} | Selection: ${selectionSize} cells`;
+                    return;
+                }
+
+                const avg = sum / count;
+                this.statsEl.textContent =
+                    `Count: ${count} | Sum: ${sum.toFixed(2)} | Avg: ${avg.toFixed(2)} | Min: ${min} | Max: ${max} | Selection: ${selectionSize} cells`;
+            }
+        };
+
+        processBatch(0);
+    }
+
+    // Debounced stats update
+    scheduleStatsUpdate() {
+        if (this.statsUpdateTimer) {
+            clearTimeout(this.statsUpdateTimer);
+        }
+        this.statsUpdateTimer = setTimeout(() => {
+            this.updateStats();
+        }, 100); // 100ms debounce
+    }
+
 
 
 
@@ -382,7 +495,7 @@ export class ExcelClone {
     bindEvents() {
         // Mouse selection & resizing
         this.canvas.addEventListener('mousedown', (e) => {
-
+            console.log("cm fired 2");
             if (e.button === 2) return;
 
             const rect = this.canvas.getBoundingClientRect();
@@ -420,6 +533,8 @@ export class ExcelClone {
             // Header selection
             if (y < this.headerHeight && x > this.headerWidth) {
                 const col = this.getColFromX(x);
+                const row = this.getRowFromY(y);
+
                 if (col) {
                     this.selection = {
                         start: { row: 0, col: col.col },
@@ -427,7 +542,7 @@ export class ExcelClone {
                         isSelecting: true,
                         type: 'col'
                     };
-                    this.activeCell = null;
+                    this.activeCell = { row: 0, col: col.col };
                     this.render();
                 }
                 return;
@@ -442,7 +557,7 @@ export class ExcelClone {
                         isSelecting: true,
                         type: 'row'
                     };
-                    this.activeCell = null;
+                    this.activeCell = { row: row.row, col: 0 };
                     this.render();
                 }
                 return;
@@ -465,6 +580,10 @@ export class ExcelClone {
 
             this.canvas.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
+
+
+                console.log("cm fired");
+
 
                 const rect = this.canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -611,9 +730,11 @@ export class ExcelClone {
             } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 if (this.activeCell) {
                     this.startCellEdit(this.activeCell.row, this.activeCell.col);
-                    this.cellInput.value = e.key;
+                    this.cellInput.value = '';     // ✅ Clear previous value
+                    this.cellInput.select();       // ✅ So the new key replaces
                 }
             }
+
         });
 
         this.cellInput.addEventListener('blur', () => {
@@ -651,7 +772,7 @@ export class ExcelClone {
         this.render();
     }
 }
-console.log("done")
+
 
 
 

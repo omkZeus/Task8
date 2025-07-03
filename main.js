@@ -1,7 +1,15 @@
 import { ExcelClone } from './ExcelClone.js';
+import { ExcelUI } from './ExcelUI.js';
 
-const canvas = document.getElementById('canvas');
-const excel = new ExcelClone(canvas);
+const root = document.getElementById('root');
+
+const ui = new ExcelUI(root, {
+    loadData: loadSampleData,
+    clearData: clearData
+});
+
+const elements = ui.getElements();
+const excel = new ExcelClone(elements); // pass all UI refs
 
 function generateSampleData(count = 100000) {
     const firstNames = ["Raj", "Anita", "Vikram", "Pooja", "Aman", "Neha", "Kunal", "Divya", "Suresh", "Meena"];
@@ -14,25 +22,18 @@ function generateSampleData(count = 100000) {
         const age = Math.floor(Math.random() * 43) + 18;
         const salary = Math.floor(Math.random() * 900000) + 100000;
 
-        data.push({
-            id: i,
-            firstName,
-            lastName,
-            Age: age,
-            Salary: salary
-        });
+        data.push({ id: i, firstName, lastName, Age: age, Salary: salary });
     }
-
     return data;
 }
 
-window.loadSampleData = function () {
+function loadSampleData() {
     const data = generateSampleData();
     excel.loadData(data);
     console.log('Loaded 100,000 records');
-};
+}
 
-window.clearData = function () {
+function clearData() {
     excel.data.clear();
     excel.render();
-};
+}
