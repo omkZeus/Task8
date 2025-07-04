@@ -33,7 +33,9 @@ export class ContextMenu {
         //     this._addItem('Insert Row Below', () => this.excel.sheetOps.insertRowBelow(row));
         // }
         if (type === 'row' || type === 'cell') {
+           
             const { start, end } = this.excel.selection;
+             if(!start && !end) return;
             const count = Math.abs((end?.row ?? start.row) - start.row) + 1;
 
             this._addItem(`Insert ${count} Row${count > 1 ? 's' : ''} Above`, () => {
@@ -58,6 +60,8 @@ export class ContextMenu {
 
         if (type === 'col' || type === 'cell') {
             const { start, end } = this.excel.selection;
+             if(!start && !end) return;
+
             const count = Math.abs((end?.col ?? start.col) - start.col) + 1;
 
             this._addItem(`Insert ${count} Column${count > 1 ? 's' : ''} Left`, () => {

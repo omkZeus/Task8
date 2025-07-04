@@ -5,6 +5,8 @@ import { Selection } from './Selection.js';
 import { Scrollbar } from './Scrollbar.js';
 import { SheetOperations } from './SheetOperations.js';
 import { ContextMenu } from './ContextMenu.js';
+import { AutoScroller } from './AutoScroller.js';
+
 
 // import { Cell } from './Cell.js';
 
@@ -42,6 +44,10 @@ export class ExcelClone {
         this.visibleCols = 0;
         this.startRow = 0;
         this.startCol = 0;
+
+        this.autoScroller = new AutoScroller(this, this.canvas, () => this.scheduleRender());
+
+
 
         // State
         this.data = new Map();
@@ -356,10 +362,12 @@ export class ExcelClone {
         this.startRow = Math.floor(this.scrollY / this.rowHeight);
         this.startCol = Math.floor(this.scrollX / this.colWidth);
 
+
         this.grid.drawGrid();
         this.grid.drawHeaders();
         this.grid.drawCells();
         this.selectionRenderer.drawSelection();
+
 
         if (this.editingCell) {
             this.updateCellInputPosition();
@@ -502,6 +510,9 @@ export class ExcelClone {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            //start Autoscroll
+            this.autoScroller.start();
+
             // Column resizing
             if (y < this.headerHeight && x > this.headerWidth) {
                 const col = this.getColFromX(x);
@@ -574,37 +585,37 @@ export class ExcelClone {
                     type: 'cell'
                 };
                 this.activeCell = { row: row.row, col: col.col };
+
                 this.render();
             }
 
+        });
 
-            this.canvas.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-
-
-                console.log("cm fired");
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
 
 
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+            console.log("cm fired");
 
-                const rowInfo = this.getRowFromY(y);
-                const colInfo = this.getColFromX(x);
 
-                let type = 'cell';
-                if (x < this.headerWidth && y > this.headerHeight && rowInfo) {
-                    type = 'row';
-                } else if (y < this.headerHeight && x > this.headerWidth && colInfo) {
-                    type = 'col';
-                }
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-                const row = rowInfo?.row ?? 0;
-                const col = colInfo?.col ?? 0;
+            const rowInfo = this.getRowFromY(y);
+            const colInfo = this.getColFromX(x);
 
-                this.contextMenu.show(e.clientX, e.clientY, type, row, col);
-            });
+            let type = 'cell';
+            if (x < this.headerWidth && y > this.headerHeight && rowInfo) {
+                type = 'row';
+            } else if (y < this.headerHeight && x > this.headerWidth && colInfo) {
+                type = 'col';
+            }
 
+            const row = rowInfo?.row ?? 0;
+            const col = colInfo?.col ?? 0;
+
+            this.contextMenu.show(e.clientX, e.clientY, type, row, col);
         });
 
 
@@ -615,18 +626,19 @@ export class ExcelClone {
 
             // --- Resize Logic ---
             if (this.isResizing) {
+                const delta1 = x - this.resizeStartPos;
+                const delta2 = y - this.resizeStartPos;
                 if (this.resizeType === 'col') {
-                    const delta = x - this.resizeStartPos;
-                    const newWidth = Math.max(30, this.resizeOriginalSize + delta);
-                    this.setColWidth(this.resizeIndex, newWidth);
+                    this.lastResizeValue = Math.max(30, this.resizeOriginalSize + delta1);
+                    this.setColWidth(this.resizeIndex, this.lastResizeValue);
                 } else if (this.resizeType === 'row') {
-                    const delta = y - this.resizeStartPos;
-                    const newHeight = Math.max(15, this.resizeOriginalSize + delta);
-                    this.setRowHeight(this.resizeIndex, newHeight);
+                    this.lastResizeValue = Math.max(15, this.resizeOriginalSize + delta2);
+                    this.setRowHeight(this.resizeIndex, this.lastResizeValue);
                 }
-                this.scheduleRender();
+                this.render();
                 return;
             }
+
 
             // --- Cursor Logic ---
             let cursor = 'default';
@@ -641,6 +653,15 @@ export class ExcelClone {
             this.canvas.style.cursor = cursor;
 
             // --- Selection Logic ---
+
+            this.autoScroller.lastMouseX = x;
+            this.autoScroller.lastMouseY = y;
+
+            if (this.selection.isSelecting) {
+                this.autoScroller.updateEdge(x, y);
+            }
+
+
             if (this.selection.isSelecting) {
                 const prevEnd = this.selection.end || {};
 
@@ -668,11 +689,61 @@ export class ExcelClone {
 
 
         window.addEventListener('mouseup', () => {
+           //Resizing of all the selected rows when mouseup is trigerred
+            if (this.isResizing) {
+                this.isResizing = false;
+
+                if (this.resizeType === 'col') {
+                    const selection = this.selection;
+                    const selectedCols = new Set();
+
+                    if (selection.type === 'col' && selection.start) {
+                        const start = Math.min(selection.start.col, selection.end?.col ?? selection.start.col);
+                        const end = Math.max(selection.start.col, selection.end?.col ?? selection.start.col);
+                        for (let c = start; c <= end; c++) {
+                            selectedCols.add(c);
+                        }
+                    }
+
+                    // Apply to all selected cols (except the one already resized)
+                    for (const col of selectedCols) {
+                        if (col !== this.resizeIndex) {
+                            this.setColWidth(col, this.lastResizeValue);
+                        }
+                    }
+
+                } else if (this.resizeType === 'row') {
+                    const selection = this.selection;
+                    const selectedRows = new Set();
+
+                    if (selection.type === 'row' && selection.start) {
+                        const start = Math.min(selection.start.row, selection.end?.row ?? selection.start.row);
+                        const end = Math.max(selection.start.row, selection.end?.row ?? selection.start.row);
+                        for (let r = start; r <= end; r++) {
+                            selectedRows.add(r);
+                        }
+                    }
+
+                    for (const row of selectedRows) {
+                        if (row !== this.resizeIndex) {
+                            this.setRowHeight(row, this.lastResizeValue);
+                        }
+                    }
+                }
+
+                this.render(); // Final re-render after applying to all
+            }
+
+            //reset the values to default
             this.selection.isSelecting = false;
             this.isResizing = false;
             this.resizeType = null;
             this.resizeIndex = -1;
             this.canvas.style.cursor = 'default';
+
+            //Stop the scrolling
+             this.autoScroller.stop();
+
         });
 
         this.canvas.addEventListener('dblclick', (e) => {
@@ -729,11 +800,15 @@ export class ExcelClone {
                 this.render();
             } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 if (this.activeCell) {
-                    this.startCellEdit(this.activeCell.row, this.activeCell.col);
-                    this.cellInput.value = '';     // ✅ Clear previous value
-                    this.cellInput.select();       // ✅ So the new key replaces
+                    const { row, col } = this.activeCell;
+                    this.autoScroller.scrollToCell(row, col); //  scroll to selected cell
+                    this.render();
+                    this.startCellEdit(row, col);
+                    this.cellInput.value = '';     // Clear previous value
+                    this.cellInput.select();       // So the new key replaces
                 }
             }
+
 
         });
 

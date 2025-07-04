@@ -128,7 +128,7 @@ export class Grid {
         // Top-left corner cell
         ctx.fillStyle = '#f5f5f5';
         ctx.fillRect(0, 0, headerWidth, headerHeight);
-        ctx.lineWidth=2
+        ctx.lineWidth = 2
         ctx.strokeStyle = '#B7B7B7';
         ctx.beginPath();
         ctx.moveTo(headerWidth, 0);
@@ -151,9 +151,10 @@ export class Grid {
         return label;
     }
 
+
     drawCells() {
         const { ctx, startRow, startCol, visibleRows, visibleCols, headerHeight, headerWidth } = this.excel;
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = '#000';
         ctx.textAlign = 'left';
 
         let y = headerHeight;
@@ -167,7 +168,7 @@ export class Grid {
                 const value = this.excel.getCell(row, col);
                 const width = this.excel.getColWidth(col);
 
-                if (value) {
+                if (value !== '') {
                     ctx.save();
                     ctx.beginPath();
                     ctx.rect(x - 4, y, width - 1, height);
