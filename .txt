@@ -14,8 +14,10 @@ html clean-done
 multiple insertion- done
 
 
-scroll while dragging
-resize multiple cols/rows
+scroll while dragging- done
+resize multiple cols/rows- done
+selection problem- when scrolled out of the visible area the selection on headers disappear
+copy/paste
 undo/redo 
 
 

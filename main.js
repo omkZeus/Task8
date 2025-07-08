@@ -1,6 +1,6 @@
 import { ExcelClone } from './ExcelClone.js';
 import { ExcelUI } from './ExcelUI.js';
-
+import { ClipboardManager } from './ClipboardManager.js';
 
 function createRootContainer(parent = document.body) {
     const root = document.createElement('div');
@@ -19,6 +19,12 @@ const ui = new ExcelUI(root, {
 
 const elements = ui.getElements();
 const excel = new ExcelClone(elements); // pass all UI refs
+console.log(elements)
+
+const clipboard = new ClipboardManager(excel, {
+    copyBtn: elements.copyBtn,
+    pasteBtn: elements.pasteBtn
+});
 
 function generateSampleData(count = 100000) {
     const firstNames = ["Raj", "Anita", "Vikram", "Pooja", "Aman", "Neha", "Kunal", "Divya", "Suresh", "Meena"];
@@ -46,3 +52,4 @@ function clearData() {
     excel.data.clear();
     excel.render();
 }
+

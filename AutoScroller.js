@@ -91,7 +91,9 @@ export class AutoScroller {
                 this.excel.scheduleRender?.();
             }
 
-            this.raf = setTimeout(() => requestAnimationFrame(step), 16);
+          this.raf = requestAnimationFrame(step);
+
+
         };
 
         step();

@@ -7,7 +7,7 @@ export class Selection {
      **/
     constructor(excel) {
         this.excel = excel;
-      
+
     }
 
     drawSelection() {
@@ -17,27 +17,35 @@ export class Selection {
         const start = selection.start;
         const end = selection.end || start;
 
+        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+        let minRow = clamp(Math.min(start.row, end.row), 0, this.excel.maxRows - 1);
+        let maxRow = clamp(Math.max(start.row, end.row), 0, this.excel.maxRows - 1);
+        let minCol = clamp(Math.min(start.col, end.col), 0, this.excel.maxCols - 1);
+        let maxCol = clamp(Math.max(start.col, end.col), 0, this.excel.maxCols - 1);
+
+
         ctx.fillStyle = 'rgba(76, 240, 98, 0.05)';
         ctx.strokeStyle = '#137E43';
         ctx.lineWidth = 2;
         const rect = canvas.getBoundingClientRect();
 
         if (selection.type === 'row') {
-            const minRow = Math.min(start.row, end.row);
-            const maxRow = Math.max(start.row, end.row);
+            // const minRow = Math.min(start.row, end.row);
+            // const maxRow = Math.max(start.row, end.row);
             let y = this.excel.headerHeight;
             let top = null;
             let bottom = null;
-            let anchor=null;
+            let anchor = null;
             for (let row = startRow; row < startRow + visibleRows; row++) {
                 const height = this.excel.getRowHeight(row);
                 if (row >= minRow && row <= maxRow) {
-                    if(!anchor){
+                    if (!anchor) {
                         ctx.fillRect(this.excel.headerWidth + this.excel.getColWidth(this.excel.startCol), y, rect.width - this.excel.headerWidth - this.excel.getColWidth(this.excel.startCol), height);
-                        anchor=true;
+                        anchor = true;
                     }
-                    else{
-                        ctx.fillRect(this.excel.headerWidth , y, rect.width - this.excel.headerWidth, height);
+                    else {
+                        ctx.fillRect(this.excel.headerWidth, y, rect.width - this.excel.headerWidth, height);
 
                     }
                     // ctx.strokeRect(0, y, rect.width - this.excel.headerWidth, height);
@@ -50,8 +58,8 @@ export class Selection {
             if (top !== null && bottom !== null) {
                 ctx.strokeRect(0, top, rect.width, bottom - top);
 
-                 ctx.fillStyle = 'rgba(73, 199, 128, 0.3)';
-                ctx.fillRect(this.excel.headerWidth,0,rect.width, this.excel.headerHeight);
+                ctx.fillStyle = 'rgba(73, 199, 128, 0.3)';
+                ctx.fillRect(this.excel.headerWidth, 0, rect.width, this.excel.headerHeight);
 
 
                 // Draw bottom border under top header highlight
@@ -63,23 +71,23 @@ export class Selection {
 
             }
         } else if (selection.type === 'col') {
-            const minCol = Math.min(start.col, end.col);
-            const maxCol = Math.max(start.col, end.col);
+            // const minCol = Math.min(start.col, end.col);
+            // const maxCol = Math.max(start.col, end.col);
             let x = this.excel.headerWidth;
             let left = null;
             let right = null;
-            let anchor=null;
+            let anchor = null;
             for (let col = startCol; col < startCol + visibleCols; col++) {
                 const width = this.excel.getColWidth(col);
                 if (col >= minCol && col <= maxCol) {
-                    if(!anchor){
+                    if (!anchor) {
 
                         ctx.fillRect(x, this.excel.headerHeight + this.excel.getRowHeight(this.excel.startRow), width, rect.height - this.excel.headerHeight - this.excel.getRowHeight(this.excel.startRow));
-                        anchor=true;
+                        anchor = true;
                     }
-                    else{
-                        ctx.fillRect(x, this.excel.headerHeight , width, rect.height - this.excel.headerHeight );
-                        
+                    else {
+                        ctx.fillRect(x, this.excel.headerHeight, width, rect.height - this.excel.headerHeight);
+
                     }
                     // ctx.strokeRect(x, 0, width, rect.height);
                     if (left == null) {
@@ -98,7 +106,7 @@ export class Selection {
             if (left !== null && right !== null) {
                 ctx.strokeRect(left, 0, right - left, rect.height);
                 ctx.fillStyle = 'rgba(73, 199, 128, 0.3)';
-                ctx.fillRect(0,this.excel.headerHeight, this.excel.headerWidth, rect.height);
+                ctx.fillRect(0, this.excel.headerHeight, this.excel.headerWidth, rect.height);
 
                 ctx.lineWidth = 2;
 
@@ -115,10 +123,10 @@ export class Selection {
 
         }
         else {
-            const minRow = Math.min(start.row, end.row);
-            const maxRow = Math.max(start.row, end.row);
-            const minCol = Math.min(start.col, end.col);
-            const maxCol = Math.max(start.col, end.col);
+            // const minRow = Math.min(start.row, end.row);
+            // const maxRow = Math.max(start.row, end.row);
+            // const minCol = Math.min(start.col, end.col);
+            // const maxCol = Math.max(start.col, end.col);
             let sumWidth = 0;
             let sumHeight = 0;
             let anchorCellRect = null;
@@ -128,21 +136,16 @@ export class Selection {
                     if (row >= startRow && row < startRow + visibleRows &&
                         col >= startCol && col < startCol + visibleCols) {
                         const cellRect = this.excel.getCellRect(row, col);
-
-
-                        // if (row != minRow || col != minCol) {
                         if (row === start.row && col === start.col) {
                             anchorCellRect = cellRect;
-                        }
-                        else {
+                        } else {
                             ctx.fillRect(cellRect.x, cellRect.y, cellRect.width, cellRect.height);
-
                         }
-
-
                     }
                 }
             }
+
+
             const visibleMinRow = Math.max(minRow, startRow);
             const visibleMaxRow = Math.min(maxRow, startRow + visibleRows - 1);
             const visibleMinCol = Math.max(minCol, startCol);

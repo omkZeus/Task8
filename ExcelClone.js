@@ -114,6 +114,7 @@ export class ExcelClone {
 
         const updateSize = () => {
             const rect = this.container.getBoundingClientRect();
+            console.log(rect.height)
             const canvasWidth = rect.width - this.scrollbarWidth;
             const canvasHeight = rect.height - this.scrollbarWidth;
 
@@ -218,14 +219,14 @@ export class ExcelClone {
             this.statsEl.textContent = `Calculating stats for ${selectionSize} cells...`;
 
             // Use setTimeout to allow UI to update and prevent blocking
-            setTimeout(() => {
-                this.calculateStatsAsync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
-            }, 10);
+            // setTimeout(() => {
+            //     // this.calculateStatsAsync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
+            // }, 10);
             return;
         }
 
         // For smaller selections, calculate immediately
-        this.calculateStatsSync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
+        // this.calculateStatsSync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
     }
 
     // Synchronous calculation for smaller selections
@@ -352,20 +353,29 @@ export class ExcelClone {
 
     render() {
 
-        const maxScrollY = this.maxRows * this.rowHeight;
-        const maxScrollX = this.maxCols * this.colWidth;
+        // const maxScrollY = this.maxRows * this.rowHeight;
+        // const maxScrollX = this.maxCols * this.colWidth;
+
+        // this.scrollY = Math.min(this.scrollY, maxScrollY);
+        // this.scrollX = Math.min(this.scrollX, maxScrollX);
+
+        const maxScrollY = this.maxRows * this.rowHeight - this.canvas.height;
+        const maxScrollX = this.maxCols * this.colWidth - this.canvas.width;
 
         this.scrollY = Math.min(this.scrollY, maxScrollY);
         this.scrollX = Math.min(this.scrollX, maxScrollX);
 
 
-        this.startRow = Math.floor(this.scrollY / this.rowHeight);
-        this.startCol = Math.floor(this.scrollX / this.colWidth);
+
+        this.startRow = Math.min(Math.floor(this.scrollY / this.rowHeight), this.maxRows - 1);
+        this.startCol = Math.min(Math.floor(this.scrollX / this.colWidth), this.maxCols - 1);
+
 
 
         this.grid.drawGrid();
         this.grid.drawHeaders();
         this.grid.drawCells();
+
         this.selectionRenderer.drawSelection();
 
 
@@ -689,7 +699,7 @@ export class ExcelClone {
 
 
         window.addEventListener('mouseup', () => {
-           //Resizing of all the selected rows when mouseup is trigerred
+            //Resizing of all the selected rows when mouseup is trigerred
             if (this.isResizing) {
                 this.isResizing = false;
 
@@ -706,11 +716,15 @@ export class ExcelClone {
                     }
 
                     // Apply to all selected cols (except the one already resized)
-                    for (const col of selectedCols) {
-                        if (col !== this.resizeIndex) {
-                            this.setColWidth(col, this.lastResizeValue);
+
+                    if (selectedCols.has(this.resizeIndex)) {
+                        for (const col of selectedCols) {
+                            if (col !== this.resizeIndex) {
+                                this.setColWidth(col, this.lastResizeValue);
+                            }
                         }
                     }
+
 
                 } else if (this.resizeType === 'row') {
                     const selection = this.selection;
@@ -724,11 +738,14 @@ export class ExcelClone {
                         }
                     }
 
-                    for (const row of selectedRows) {
-                        if (row !== this.resizeIndex) {
-                            this.setRowHeight(row, this.lastResizeValue);
+                    if (selectedRows.has(this.resizeIndex)) {
+                        for (const row of selectedRows) {
+                            if (row !== this.resizeIndex) {
+                                this.setRowHeight(row, this.lastResizeValue);
+                            }
                         }
                     }
+
                 }
 
                 this.render(); // Final re-render after applying to all
@@ -742,7 +759,7 @@ export class ExcelClone {
             this.canvas.style.cursor = 'default';
 
             //Stop the scrolling
-             this.autoScroller.stop();
+            this.autoScroller.stop();
 
         });
 
@@ -847,6 +864,7 @@ export class ExcelClone {
         this.render();
     }
 }
+
 
 
 

@@ -27,7 +27,16 @@ export class ExcelUI {
         this.stats.className = 'stats';
         this.stats.textContent = 'Ready';
 
-        this.toolbar.append(this.loadBtn, this.clearBtn, this.stats);
+        this.copyBtn = document.createElement('button');
+        this.copyBtn.textContent = 'Copy';
+        this.copyBtn.disabled = false;
+
+        this.pasteBtn = document.createElement('button');
+        this.pasteBtn.textContent = 'Paste';
+        this.pasteBtn.disabled = true;
+
+        this.toolbar.append(this.loadBtn, this.clearBtn, this.copyBtn, this.pasteBtn, this.stats);
+
 
         this.canvasContainer = document.createElement('div');
         this.canvasContainer.id = 'canvasContainer';
@@ -62,7 +71,6 @@ export class ExcelUI {
         this.container.append(this.toolbar, this.canvasContainer);
         this.rootEl.appendChild(this.container);
     }
-
     getElements() {
         return {
             canvas: this.canvas,
@@ -72,7 +80,10 @@ export class ExcelUI {
             vScrollbar: this.vScrollbar,
             hScrollbar: this.hScrollbar,
             vThumb: this.vThumb,
-            hThumb: this.hThumb
+            hThumb: this.hThumb,
+            copyBtn: this.copyBtn,
+            pasteBtn: this.pasteBtn
         };
     }
+
 }
