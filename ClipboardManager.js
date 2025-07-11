@@ -60,18 +60,15 @@ export class ClipboardManager {
 
     for (let r = minRow; r <= maxRow; r++) {
         const row = [];
-        let hasContent = false;
+        // let hasContent = false;
         for (let c = minCol; c <= maxCol; c++) {
             const value = this.excel.getCell(r, c);
             row.push(value);
-            if (value !== '') hasContent = true;
         }
-        // Avoid copying huge number of empty rows in full col selection
-        if (sel.type === 'col') {
-            if (hasContent) data.push(row);
-        } else {
-            data.push(row); // Always push for row selection
-        }
+      
+       
+            data.push(row); 
+       
     }
 
     this.clipboardData = {
@@ -100,7 +97,7 @@ export class ClipboardManager {
 
         for (let r = 0; r < this.clipboardData.rows; r++) {
             for (let c = 0; c < this.clipboardData.cols; c++) {
-                const value = this.clipboardData.data[r][c];
+                const value = this.clipboardData.data[r][c] ;
                 this.excel.setCell(startRow + r, startCol + c, value);
             }
         }

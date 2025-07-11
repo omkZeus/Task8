@@ -6,6 +6,10 @@ import { Scrollbar } from './Scrollbar.js';
 import { SheetOperations } from './SheetOperations.js';
 import { ContextMenu } from './ContextMenu.js';
 import { AutoScroller } from './AutoScroller.js';
+import { RegisterHandlers } from './RegisterHandlers.js';
+import { CommandManager } from './commands/CommandManager.js';
+import { EditCellCommand } from './commands/EditCellCommand.js';
+
 
 
 // import { Cell } from './Cell.js';
@@ -16,7 +20,8 @@ export class ExcelClone {
       * @param {HTMLCanvasElement} canvas Canvas element to render the spreadsheet
       **/
 
-    constructor({ canvas, cellInput, statsEl, container, vScrollbar, hScrollbar, vThumb, hThumb }) {
+    constructor({ Excelcontainer, canvas, cellInput, statsEl, container, vScrollbar, hScrollbar, vThumb, hThumb }) {
+        this.Excelcontainer = Excelcontainer;
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.cellInput = cellInput;
@@ -28,8 +33,8 @@ export class ExcelClone {
         this.hThumb = hThumb;
 
         // Grid configuration
-        this.rowHeight = 25;
-        this.colWidth = 100;
+        this.rowHeight = 22;
+        this.colWidth = 71;
         this.headerHeight = 25;
         this.headerWidth = 50;
 
@@ -91,6 +96,9 @@ export class ExcelClone {
         //Smooth animation using req animation
         this._renderScheduled = false;
 
+        //Command manager instance
+        this.commandManager = new CommandManager();
+
         this.scheduleRender = () => {
             if (!this._renderScheduled) {
                 this._renderScheduled = true;
@@ -122,7 +130,6 @@ export class ExcelClone {
             this.canvas.height = canvasHeight * dpr;
             this.canvas.style.width = canvasWidth + 'px';
             this.canvas.style.height = canvasHeight + 'px';
-
             this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             this.ctx.font = '14px Arial';
             this.ctx.textBaseline = 'middle';
@@ -219,14 +226,14 @@ export class ExcelClone {
             this.statsEl.textContent = `Calculating stats for ${selectionSize} cells...`;
 
             // Use setTimeout to allow UI to update and prevent blocking
-            // setTimeout(() => {
-            //     // this.calculateStatsAsync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
-            // }, 10);
+            setTimeout(() => {
+                this.calculateStatsAsync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
+            }, 10);
             return;
         }
 
         // For smaller selections, calculate immediately
-        // this.calculateStatsSync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
+        this.calculateStatsSync(sel, minRow, maxRow, minCol, maxCol, selectionSize);
     }
 
     // Synchronous calculation for smaller selections
@@ -423,7 +430,13 @@ export class ExcelClone {
         const { row, col } = this.editingCell;
         const value = this.cellInput.value.trim();
 
-        this.setCell(row, col, value);
+        //oldval and newval for undo redo
+        const oldValue = this.getCell(row, col);
+        if (oldValue !== value) {
+            const cmd = new EditCellCommand(this, row, col, oldValue, value);
+            this.commandManager.executeCommand(cmd);
+        }
+
         this.cellInput.style.display = 'none';
         this.editingCell = null;
         this.render();
@@ -508,276 +521,22 @@ export class ExcelClone {
         return null;
     }
 
-
-
     bindEvents() {
-        // Mouse selection & resizing
-        this.canvas.addEventListener('mousedown', (e) => {
-            console.log("cm fired 2");
-            if (e.button === 2) return;
+        // Setup all pointer-based handlers
+        this.touchManager = RegisterHandlers(this, this.canvas);
 
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            //start Autoscroll
-            this.autoScroller.start();
-
-            // Column resizing
-            if (y < this.headerHeight && x > this.headerWidth) {
-                const col = this.getColFromX(x);
-                if (col && Math.abs(x - (col.x + col.width)) < 5) {
-                    this.isResizing = true;
-                    this.resizeType = 'col';
-                    this.resizeIndex = col.col;
-                    this.resizeStartPos = x;
-                    this.resizeOriginalSize = this.getColWidth(col.col);
-                    this.canvas.style.cursor = 'col-resize';
-                    return;
-                }
-            }
-
-            // Row resizing
-            if (x < this.headerWidth && y > this.headerHeight) {
-                const row = this.getRowFromY(y);
-                if (row && Math.abs(y - (row.y + row.height)) < 5) {
-                    this.isResizing = true;
-                    this.resizeType = 'row';
-                    this.resizeIndex = row.row;
-                    this.resizeStartPos = y;
-                    this.resizeOriginalSize = this.getRowHeight(row.row);
-                    this.canvas.style.cursor = 'row-resize';
-                    return;
-                }
-            }
-
-            // Header selection
-            if (y < this.headerHeight && x > this.headerWidth) {
-                const col = this.getColFromX(x);
-                const row = this.getRowFromY(y);
-
-                if (col) {
-                    this.selection = {
-                        start: { row: 0, col: col.col },
-                        end: null,
-                        isSelecting: true,
-                        type: 'col'
-                    };
-                    this.activeCell = { row: 0, col: col.col };
-                    this.render();
-                }
-                return;
-            }
-
-            if (x < this.headerWidth && y > this.headerHeight) {
-                const row = this.getRowFromY(y);
-                if (row) {
-                    this.selection = {
-                        start: { row: row.row, col: 0 },
-                        end: null,
-                        isSelecting: true,
-                        type: 'row'
-                    };
-                    this.activeCell = { row: row.row, col: 0 };
-                    this.render();
-                }
-                return;
-            }
-
-            // Cell selection
-            const row = this.getRowFromY(y);
-            const col = this.getColFromX(x);
-            if (row && col) {
-                this.selection = {
-                    start: { row: row.row, col: col.col },
-                    end: null,
-                    isSelecting: true,
-                    type: 'cell'
-                };
-                this.activeCell = { row: row.row, col: col.col };
-
-                this.render();
-            }
-
-        });
-
-        this.canvas.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-
-
-            console.log("cm fired");
-
-
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            const rowInfo = this.getRowFromY(y);
-            const colInfo = this.getColFromX(x);
-
-            let type = 'cell';
-            if (x < this.headerWidth && y > this.headerHeight && rowInfo) {
-                type = 'row';
-            } else if (y < this.headerHeight && x > this.headerWidth && colInfo) {
-                type = 'col';
-            }
-
-            const row = rowInfo?.row ?? 0;
-            const col = colInfo?.col ?? 0;
-
-            this.contextMenu.show(e.clientX, e.clientY, type, row, col);
-        });
-
-
-        window.addEventListener('mousemove', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            // --- Resize Logic ---
-            if (this.isResizing) {
-                const delta1 = x - this.resizeStartPos;
-                const delta2 = y - this.resizeStartPos;
-                if (this.resizeType === 'col') {
-                    this.lastResizeValue = Math.max(30, this.resizeOriginalSize + delta1);
-                    this.setColWidth(this.resizeIndex, this.lastResizeValue);
-                } else if (this.resizeType === 'row') {
-                    this.lastResizeValue = Math.max(15, this.resizeOriginalSize + delta2);
-                    this.setRowHeight(this.resizeIndex, this.lastResizeValue);
-                }
-                this.render();
-                return;
-            }
-
-
-            // --- Cursor Logic ---
-            let cursor = 'default';
-            const col = this.getColFromX(x);
-            const row = this.getRowFromY(y);
-
-            if (y < this.headerHeight && col && Math.abs(x - (col.x + col.width)) < 5) {
-                cursor = 'col-resize';
-            } else if (x < this.headerWidth && row && Math.abs(y - (row.y + row.height)) < 5) {
-                cursor = 'row-resize';
-            }
-            this.canvas.style.cursor = cursor;
-
-            // --- Selection Logic ---
-
-            this.autoScroller.lastMouseX = x;
-            this.autoScroller.lastMouseY = y;
-
-            if (this.selection.isSelecting) {
-                this.autoScroller.updateEdge(x, y);
-            }
-
-
-            if (this.selection.isSelecting) {
-                const prevEnd = this.selection.end || {};
-
-                if (this.selection.type === 'col' && col) {
-                    if (prevEnd.col !== col.col) {
-                        this.selection.end = { row: 0, col: col.col };
-                        // this.updateStats();
-                        this.scheduleRender();
-                    }
-                } else if (this.selection.type === 'row' && row) {
-                    if (prevEnd.row !== row.row) {
-                        this.selection.end = { row: row.row, col: 0 };
-                        // this.updateStats();
-                        this.scheduleRender();
-                    }
-                } else if (row && col) {
-                    if (prevEnd.row !== row.row || prevEnd.col !== col.col) {
-                        this.selection.end = { row: row.row, col: col.col };
-                        // this.updateStats();
-                        this.scheduleRender();
-                    }
-                }
-            }
-        });
-
-
-        window.addEventListener('mouseup', () => {
-            //Resizing of all the selected rows when mouseup is trigerred
-            if (this.isResizing) {
-                this.isResizing = false;
-
-                if (this.resizeType === 'col') {
-                    const selection = this.selection;
-                    const selectedCols = new Set();
-
-                    if (selection.type === 'col' && selection.start) {
-                        const start = Math.min(selection.start.col, selection.end?.col ?? selection.start.col);
-                        const end = Math.max(selection.start.col, selection.end?.col ?? selection.start.col);
-                        for (let c = start; c <= end; c++) {
-                            selectedCols.add(c);
-                        }
-                    }
-
-                    // Apply to all selected cols (except the one already resized)
-
-                    if (selectedCols.has(this.resizeIndex)) {
-                        for (const col of selectedCols) {
-                            if (col !== this.resizeIndex) {
-                                this.setColWidth(col, this.lastResizeValue);
-                            }
-                        }
-                    }
-
-
-                } else if (this.resizeType === 'row') {
-                    const selection = this.selection;
-                    const selectedRows = new Set();
-
-                    if (selection.type === 'row' && selection.start) {
-                        const start = Math.min(selection.start.row, selection.end?.row ?? selection.start.row);
-                        const end = Math.max(selection.start.row, selection.end?.row ?? selection.start.row);
-                        for (let r = start; r <= end; r++) {
-                            selectedRows.add(r);
-                        }
-                    }
-
-                    if (selectedRows.has(this.resizeIndex)) {
-                        for (const row of selectedRows) {
-                            if (row !== this.resizeIndex) {
-                                this.setRowHeight(row, this.lastResizeValue);
-                            }
-                        }
-                    }
-
-                }
-
-                this.render(); // Final re-render after applying to all
-            }
-
-            //reset the values to default
-            this.selection.isSelecting = false;
-            this.isResizing = false;
-            this.resizeType = null;
-            this.resizeIndex = -1;
-            this.canvas.style.cursor = 'default';
-
-            //Stop the scrolling
-            this.autoScroller.stop();
-
-        });
-
-        this.canvas.addEventListener('dblclick', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            if (x < this.headerWidth || y < this.headerHeight) return;
-
-            const row = this.getRowFromY(y);
-            const col = this.getColFromX(x);
-            if (row && col) {
-                this.startCellEdit(row.row, col.col);
-            }
-        });
-
+        // Keyboard Navigation / Cell Editing
         document.addEventListener('keydown', (e) => {
+            // undo-redo shortcuts
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                this.commandManager.undo();
+            }
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                this.commandManager.redo();
+            }
+
             if (this.editingCell) {
                 if (e.key === 'Enter' || e.key === 'Tab') {
                     e.preventDefault();
@@ -818,21 +577,59 @@ export class ExcelClone {
             } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 if (this.activeCell) {
                     const { row, col } = this.activeCell;
-                    this.autoScroller.scrollToCell(row, col); //  scroll to selected cell
+                    this.autoScroller.scrollToCell(row, col);
                     this.render();
                     this.startCellEdit(row, col);
-                    this.cellInput.value = '';     // Clear previous value
-                    this.cellInput.select();       // So the new key replaces
+                    this.cellInput.value = '';
+                    this.cellInput.select();
                 }
             }
-
-
         });
 
-        this.cellInput.addEventListener('blur', () => {
-            this.finishCellEdit();
+        // Double-click to edit cell
+        this.canvas.addEventListener('dblclick', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (x < this.headerWidth || y < this.headerHeight) return;
+
+            const row = this.getRowFromY(y);
+            const col = this.getColFromX(x);
+            if (row && col) {
+                this.startCellEdit(row.row, col.col);
+            }
         });
 
+        // Right-click context menu
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+
+            console.log("cm fired");
+
+            this.selection.isSelecting = false;
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const rowInfo = this.getRowFromY(y);
+            const colInfo = this.getColFromX(x);
+
+            let type = 'cell';
+            if (x < this.headerWidth && y > this.headerHeight && rowInfo) {
+                type = 'row';
+            } else if (y < this.headerHeight && x > this.headerWidth && colInfo) {
+                type = 'col';
+            }
+
+            const row = rowInfo?.row ?? 0;
+            const col = colInfo?.col ?? 0;
+
+            this.contextMenu.show(e.clientX, e.clientY, type, row, col);
+        });
+
+        // Mouse wheel scroll
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             if (e.shiftKey) {
@@ -842,7 +639,17 @@ export class ExcelClone {
             }
             this.render();
         });
+
+        // when Input blur then finish edit
+        this.cellInput.addEventListener('blur', () => {
+            this.finishCellEdit();
+        });
+
+
+
     }
+
+
 
     setupScrollbars() {
         const rect = this.container.getBoundingClientRect();

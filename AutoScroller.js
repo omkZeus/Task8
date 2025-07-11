@@ -16,14 +16,29 @@ export class AutoScroller {
         this.raf = null;
     }
 
-    updateEdge(x, y) {
-        const margin = 20;
+    // updateEdge(x, y) {
+    //     const marginRB = 15;
+    //     const marginLB = 50;
+    //     const rect = this.excel.Excelcontainer.getBoundingClientRect();
+    //     const canvasRect=this.excel.container.getBoundingClientRect();
+
+    //     this.edge.top = y < rect.height-canvasRect.height+ 25;
+    //     console.log(y,rect-canvasRect)
+    //     this.edge.bottom = y > rect.height - marginRB;
+    //     this.edge.left = x < marginLB;
+    //     this.edge.right = x > rect.width - marginRB;
+    // }
+
+       updateEdge(x, y) {
+        const marginRB = 15;
+        const marginL = 50;
+        const marginT =25;
         const rect = this.canvas.getBoundingClientRect();
 
-        this.edge.top = y < margin;
-        this.edge.bottom = y > rect.height - margin;
-        this.edge.left = x < margin;
-        this.edge.right = x > rect.width - margin;
+        this.edge.top = y < marginT;
+        this.edge.bottom = y > rect.height;
+        this.edge.left = x < marginL;
+        this.edge.right = x > rect.width;
     }
 
     start() {
@@ -31,8 +46,8 @@ export class AutoScroller {
 
         const step = () => {
             let changed = false;
-            const verticalSpeed = 20;
-            const horizontalSpeed = 40;
+            const verticalSpeed = 10;
+            const horizontalSpeed = 20;
 
             const selType = this.excel.selection.type;
 

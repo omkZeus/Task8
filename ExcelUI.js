@@ -73,6 +73,7 @@ export class ExcelUI {
     }
     getElements() {
         return {
+            Excelcontainer: this.container,
             canvas: this.canvas,
             cellInput: this.cellInput,
             statsEl: this.stats,

@@ -11,12 +11,12 @@ export class Selection {
     }
 
     drawSelection() {
-        const { ctx, canvas, selection, startRow, startCol, visibleRows, visibleCols, render } = this.excel;
+        const { ctx, canvas, selection, startRow, startCol, visibleRows, visibleCols } = this.excel;
         if (!selection.start) return;
 
         const start = selection.start;
         const end = selection.end || start;
-
+        // keeps the sleection clamped inside the grid 
         const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 
         let minRow = clamp(Math.min(start.row, end.row), 0, this.excel.maxRows - 1);
@@ -36,11 +36,11 @@ export class Selection {
             let y = this.excel.headerHeight;
             let top = null;
             let bottom = null;
-            let anchor = null;
+            let anchor = start.row;
             for (let row = startRow; row < startRow + visibleRows; row++) {
                 const height = this.excel.getRowHeight(row);
                 if (row >= minRow && row <= maxRow) {
-                    if (!anchor) {
+                    if (row===anchor) {
                         ctx.fillRect(this.excel.headerWidth + this.excel.getColWidth(this.excel.startCol), y, rect.width - this.excel.headerWidth - this.excel.getColWidth(this.excel.startCol), height);
                         anchor = true;
                     }
@@ -76,14 +76,14 @@ export class Selection {
             let x = this.excel.headerWidth;
             let left = null;
             let right = null;
-            let anchor = null;
+            let anchor = start.col;
             for (let col = startCol; col < startCol + visibleCols; col++) {
                 const width = this.excel.getColWidth(col);
                 if (col >= minCol && col <= maxCol) {
-                    if (!anchor) {
+                    if (col === anchor) {
 
                         ctx.fillRect(x, this.excel.headerHeight + this.excel.getRowHeight(this.excel.startRow), width, rect.height - this.excel.headerHeight - this.excel.getRowHeight(this.excel.startRow));
-                        anchor = true;
+                        
                     }
                     else {
                         ctx.fillRect(x, this.excel.headerHeight, width, rect.height - this.excel.headerHeight);
