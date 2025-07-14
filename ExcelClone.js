@@ -20,7 +20,7 @@ export class ExcelClone {
       * @param {HTMLCanvasElement} canvas Canvas element to render the spreadsheet
       **/
 
-    constructor({ Excelcontainer, canvas, cellInput, statsEl, container, vScrollbar, hScrollbar, vThumb, hThumb }) {
+    constructor({ Excelcontainer, canvas, cellInput, statsEl, container, vScrollbar, hScrollbar, vThumb, hThumb, undobtn, redobtn }) {
         this.Excelcontainer = Excelcontainer;
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
@@ -31,6 +31,8 @@ export class ExcelClone {
         this.hScrollbar = hScrollbar;
         this.vThumb = vThumb;
         this.hThumb = hThumb;
+        this.undoBtn = undobtn
+        this.redoBtn = redobtn
 
         // Grid configuration
         this.rowHeight = 22;
@@ -524,6 +526,25 @@ export class ExcelClone {
     bindEvents() {
         // Setup all pointer-based handlers
         this.touchManager = RegisterHandlers(this, this.canvas);
+
+        // this.copyBtn = buttons.copyBtn || null;
+
+
+        if (this.undoBtn) {
+            console.log("Helllo");
+            
+            this.undoBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.commandManager.undo();
+            });
+        }
+
+        if (this.redoBtn) {
+            this.redoBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.commandManager.redo();
+            });
+        }
 
         // Keyboard Navigation / Cell Editing
         document.addEventListener('keydown', (e) => {

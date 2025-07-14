@@ -9,16 +9,16 @@ export class ClipboardManager {
         this.excel = excel;
         this.clipboardData = null;
 
-        this.copyBtn = buttons.copyBtn || null;
-        this.pasteBtn = buttons.pasteBtn || null;
+        // this.copyBtn = buttons.copyBtn || null;
+        // this.pasteBtn = buttons.pasteBtn || null;
 
-        if (this.copyBtn) {
-            this.copyBtn.addEventListener('click', () => this.copy());
-        }
+        // if (this.copyBtn) {
+        //     this.copyBtn.addEventListener('click', () => this.copy());
+        // }
 
-        if (this.pasteBtn) {
-            this.pasteBtn.addEventListener('click', () => this.paste());
-        }
+        // if (this.pasteBtn) {
+        //     this.pasteBtn.addEventListener('click', () => this.paste());
+        // }
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {

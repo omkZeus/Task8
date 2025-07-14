@@ -27,8 +27,8 @@ const clipboard = new ClipboardManager(excel, {
 });
 
 function generateSampleData(count = 100000) {
-    const firstNames = ["Raj", "Anita", "Vikram", "Pooja", "Aman", "Neha", "Kunal", "Divya", "Suresh", "Meena"];
-    const lastNames = ["Solanki", "Sharma", "Verma", "Patel", "Mehta", "Desai", "Kapoor", "Singh", "Jain", "Gupta"];
+    const firstNames = ["shramik", "akash", "manthan", "rajesh", "ganesh", "kumar", "Kunal", "Divya", "Suresh", "Meena"];
+    const lastNames = ["koli", "khatri", "mane", "khamkar", "patil", "naidu", "Kapoor", "Singh", "Jain", "Gupta"];
     const data = [];
 
     for (let i = 1; i <= count; i++) {
